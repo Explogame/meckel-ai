@@ -1,16 +1,16 @@
 from pathlib import Path
+from typing import Any, Dict
 from ultralytics import YOLO
 from .config import TrainConfig
 
 def run_training(config: TrainConfig) -> Path:
     """
     Initialize YOLOv8n and run training.
-    Returns the directory where results and weights are saved.
+    Returns the exact directory where results and weights are saved.
     """
-    # Downloads yolov8n.pt automatically if not present
     model = YOLO("yolov8n.pt")  
     
-    model.train(
+    kwargs: Dict[str, Any] = dict(
         data=config.data_yaml,
         epochs=config.epochs,
         batch=config.batch,
@@ -23,5 +23,11 @@ def run_training(config: TrainConfig) -> Path:
         patience=config.patience,
     )
     
-    save_dir = Path(config.project) / config.name
+    if config.cache is not None:
+        kwargs["cache"] = config.cache
+        
+    model.train(**kwargs)
+    
+    # Ultralytics stores the exact path used internally
+    save_dir = Path(model.trainer.save_dir)
     return save_dir
