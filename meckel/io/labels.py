@@ -29,31 +29,37 @@ def parse_yolo_label(path: Path) -> List[YoloBox]:
     """
     Parse one YOLO-format label file.
 
-    Expected line format:
+    Expected values per box:
         class_id x_center y_center width height
+
+    Some files in this dataset wrap multiple boxes onto a single line
+    (tokens re-flowed at arbitrary line breaks), so we parse the whole
+    file as a flat token stream and chunk it in groups of 5.
     """
+    if not path.exists():
+        return []
+
+    tokens = path.read_text().split()
+
+    if not tokens:
+        return []
+
+    if len(tokens) % 5 != 0:
+        raise ValueError(
+            f"{path}: token count {len(tokens)} is not a multiple of 5"
+        )
+
     boxes: List[YoloBox] = []
 
-    if not path.exists():
-        return boxes
-
-    for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
-        line = raw_line.strip()
-        if not line:
-            continue
-
-        parts = line.split()
-        if len(parts) != 5:
-            raise ValueError(
-                f"{path}:{line_number} expected 5 YOLO fields, found {len(parts)}"
-            )
+    for start in range(0, len(tokens), 5):
+        chunk = tokens[start:start + 5]
 
         try:
-            class_id = int(parts[0])
-            x_center, y_center, width, height = (float(value) for value in parts[1:])
+            class_id = int(chunk[0])
+            x_center, y_center, width, height = (float(value) for value in chunk[1:])
         except ValueError as exc:
             raise ValueError(
-                f"{path}:{line_number} could not parse YOLO box values"
+                f"{path}: invalid YOLO box values in tokens {start + 1}-{start + 5}"
             ) from exc
 
         box = YoloBox(
@@ -65,7 +71,9 @@ def parse_yolo_label(path: Path) -> List[YoloBox]:
         )
 
         if not box.is_valid():
-            raise ValueError(f"{path}:{line_number} invalid YOLO box: {box}")
+            raise ValueError(
+                f"{path}: invalid YOLO box in tokens {start + 1}-{start + 5}: {box}"
+            )
 
         boxes.append(box)
 
