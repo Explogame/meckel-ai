@@ -5,10 +5,12 @@ Reviewer: manual visual check of 20 sampled train images containing periapical_l
 ## Train split stats
 - images: 6826
 - empty label files (negatives): 902
-- total boxes: 10967 (pre-fix count; rises slightly after wrapped-line parser fix)
+- total boxes: 10967 (pre-fix count; rises slightly after mixed-format parser fix)
   - caries: 8456
   - periapical_lesion: 2511
-- label files with wrapped/multi-box lines: 40 (now parsed correctly by our tools)
+- 40 label files mix YOLO detection box lines with YOLO-seg polygon lines
+  (observed polygons are class 0 / caries); our parser converts polygons to
+  axis-aligned bounding boxes.
 
 ## Visual verification result: PARTIAL PASS — accepted as pass with known limitations
 - ~15/20 sampled boxes correctly sit on periapical / apical radiolucent regions.

@@ -25,55 +25,77 @@ class YoloBox:
         )
 
 
+def _polygon_to_box(class_id: int, coords: List[float]) -> YoloBox:
+    """
+    Convert YOLO-seg polygon coordinates (x1 y1 x2 y2 ... xn yn)
+    into an axis-aligned bounding box.
+    """
+    xs = coords[0::2]
+    ys = coords[1::2]
+
+    x_min = min(xs)
+    x_max = max(xs)
+    y_min = min(ys)
+    y_max = max(ys)
+
+    return YoloBox(
+        class_id=class_id,
+        x_center=(x_min + x_max) / 2.0,
+        y_center=(y_min + y_max) / 2.0,
+        width=x_max - x_min,
+        height=y_max - y_min,
+    )
+
+
 def parse_yolo_label(path: Path) -> List[YoloBox]:
     """
     Parse one YOLO-format label file.
 
-    Expected values per box:
-        class_id x_center y_center width height
+    This dataset mixes two line formats:
+      1. Detection box:   class_id x_center y_center width height
+      2. Polygon (seg):   class_id x1 y1 x2 y2 ... xn yn
 
-    Some files in this dataset wrap multiple boxes onto a single line
-    (tokens re-flowed at arbitrary line breaks), so we parse the whole
-    file as a flat token stream and chunk it in groups of 5.
+    Polygon lines are converted to axis-aligned bounding boxes
+    using the min/max of the polygon coordinates.
     """
     if not path.exists():
         return []
 
-    tokens = path.read_text().split()
-
-    if not tokens:
-        return []
-
-    if len(tokens) % 5 != 0:
-        raise ValueError(
-            f"{path}: token count {len(tokens)} is not a multiple of 5"
-        )
-
     boxes: List[YoloBox] = []
 
-    for start in range(0, len(tokens), 5):
-        chunk = tokens[start:start + 5]
+    for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        tokens = line.split()
 
         try:
-            class_id = int(chunk[0])
-            x_center, y_center, width, height = (float(value) for value in chunk[1:])
+            class_id = int(tokens[0])
+            coords = [float(value) for value in tokens[1:]]
         except ValueError as exc:
             raise ValueError(
-                f"{path}: invalid YOLO box values in tokens {start + 1}-{start + 5}"
+                f"{path}:{line_number} could not parse YOLO values"
             ) from exc
 
-        box = YoloBox(
-            class_id=class_id,
-            x_center=x_center,
-            y_center=y_center,
-            width=width,
-            height=height,
-        )
+        if len(coords) == 4:
+            box = YoloBox(
+                class_id=class_id,
+                x_center=coords[0],
+                y_center=coords[1],
+                width=coords[2],
+                height=coords[3],
+            )
+        elif len(coords) >= 6 and len(coords) % 2 == 0:
+            box = _polygon_to_box(class_id, coords)
+        else:
+            raise ValueError(
+                f"{path}:{line_number} unsupported YOLO line format "
+                f"({len(coords)} coordinate values)"
+            )
 
         if not box.is_valid():
-            raise ValueError(
-                f"{path}: invalid YOLO box in tokens {start + 1}-{start + 5}: {box}"
-            )
+            raise ValueError(f"{path}:{line_number} invalid YOLO box: {box}")
 
         boxes.append(box)
 
