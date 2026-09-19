@@ -94,6 +94,8 @@ def parse_yolo_label(path: Path) -> List[YoloBox]:
                 f"({len(coords)} coordinate values)"
             )
 
+        if box.width <= 0.0 or box.height <= 0.0:
+            continue  # skip degenerate zero-area boxes (points/lines)
         if not box.is_valid():
             raise ValueError(f"{path}:{line_number} invalid YOLO box: {box}")
 
