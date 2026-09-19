@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Outputs
+outputs/
+runs/
+logs/
+*.log
+
+# Model artifacts
+*.pt
+*.onnx
+*.engine
+
+# Data
+data/
+datasets/
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
