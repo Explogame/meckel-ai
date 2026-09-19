@@ -16,9 +16,9 @@ def main() -> None:
         device="0",
         project="runs/detect",
         name="meckel_v1_full",
-        workers=2,
+        workers=0,
         patience=20,
-        cache="ram",
+        cache="False",
     )
     
     print(f"Starting full training run: {config.epochs} epochs, batch {config.batch}, cache={config.cache}")
