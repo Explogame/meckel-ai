@@ -21,6 +21,10 @@ logs/
 *.pt
 *.onnx
 *.engine
+weights/
+
+# Demo sample images
+samples/
 
 # Data
 data/

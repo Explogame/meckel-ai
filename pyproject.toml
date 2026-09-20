@@ -18,6 +18,9 @@ train = [
     "opencv-python>=4.9.0",
     "matplotlib>=3.8.0",
 ]
+demo = [
+    "streamlit>=1.36.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["meckel*"]
