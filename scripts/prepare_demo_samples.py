@@ -49,9 +49,7 @@ def main() -> None:
     if not candidates:
         raise SystemExit("No candidate images found.")
 
-    selected = random.Random(args.seed).sample(
-        candidates, min(args.num_images, len(candidates))
-    )
+    selected = random.Random(args.seed).sample(candidates, min(args.num_images, len(candidates)))
 
     args.output.mkdir(parents=True, exist_ok=True)
     for image_path in selected:

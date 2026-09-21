@@ -17,14 +17,18 @@ runs/
 logs/
 *.log
 
-# Model artifacts
+# Model artifacts (but keep the committed demo weights)
 *.pt
 *.onnx
 *.engine
-weights/
+weights/*
+!weights/meckel_v1_best.pt
 
-# Demo sample images
-samples/
+# Demo samples (but keep the bundled demo images)
+samples/*
+!samples/*.jpg
+!samples/*.jpeg
+!samples/*.png
 
 # Data
 data/

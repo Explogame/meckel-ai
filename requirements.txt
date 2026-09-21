@@ -1,0 +1,5 @@
+streamlit>=1.36.0
+ultralytics>=8.2.0
+opencv-python-headless>=4.9.0
+pillow>=10.3.0
+pyyaml>=6.0.1

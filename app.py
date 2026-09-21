@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import streamlit as st
 from PIL import Image
 
@@ -12,6 +14,7 @@ from meckel.ui.review import load_reviews, save_review
 st.set_page_config(page_title="Meckel AI", page_icon="🦷", layout="wide")
 
 WEIGHTS_PATH = "weights/meckel_v1_best.pt"
+SAMPLE_DIR = Path("samples")
 MAX_UPLOAD_MB = 10
 
 DENTAL_TIPS = [
@@ -23,6 +26,11 @@ DENTAL_TIPS = [
 ]
 
 LABEL_OPTIONS = ["periapical_lesion", "caries", "not_a_finding"]
+
+
+@st.cache_resource
+def get_model():
+    return load_model(WEIGHTS_PATH)
 
 
 def init_state() -> None:
@@ -101,28 +109,46 @@ elif page == "New Scan":
     st.title("New Scan")
     st.caption("1 Upload  →  2 Quality Check  →  3 Analyze  →  4 Verify")
 
-    uploaded = st.file_uploader(
-        "Upload a periapical radiograph", type=["jpg", "jpeg", "png"]
-    )
+    uploaded = st.file_uploader("Upload a periapical radiograph", type=["jpg", "jpeg", "png"])
 
     if uploaded is not None:
         size_mb = uploaded.size / (1024 * 1024)
         if size_mb > MAX_UPLOAD_MB:
-            st.error(
-                "Unsupported image: file too large. We currently support JPG and PNG files up to 10MB."
-            )
+            st.error("Unsupported image: file too large. We currently support JPG and PNG files up to 10MB.")
             st.stop()
 
-    if uploaded is not None and uploaded.name != st.session_state.image_name:
-        reset_scan()
-        st.session_state.image_name = uploaded.name
+    sample_names = []
+    if SAMPLE_DIR.is_dir():
+        sample_names = sorted(
+            p.name for p in SAMPLE_DIR.iterdir()
+            if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+        )
 
-    if uploaded is None:
-        st.info("Upload a radiograph to begin. Sample images are in the `samples/` folder.")
+    sample_choice = st.selectbox(
+        "Or test with a bundled sample image",
+        [""] + sample_names,
+        format_func=lambda s: s if s else "-- choose a sample --",
+    )
+
+    image = None
+    source_name = None
+    if uploaded is not None:
+        source_name = uploaded.name
+        image = Image.open(uploaded).convert("RGB")
+    elif sample_choice:
+        source_name = f"sample:{sample_choice}"
+        image = Image.open(SAMPLE_DIR / sample_choice).convert("RGB")
+
+    if source_name is not None and source_name != st.session_state.image_name:
+        reset_scan()
+        st.session_state.image_name = source_name
+
+    if source_name is None:
+        if st.session_state.image_name is not None:
+            reset_scan()
+        st.info("Upload a radiograph or pick a bundled sample to begin.")
         tip_carousel("idle")
         st.stop()
-
-    image = Image.open(uploaded).convert("RGB")
 
     # ---- Step 2: quality gate ----
     st.subheader("Image Quality Check")
@@ -136,19 +162,14 @@ elif page == "New Scan":
             st.markdown(f"{icon} **{name}** — {detail}")
 
     if not report.ok:
-        st.error(
-            "Image Quality Too Low — the uploaded image may be blurry or too low resolution "
-            "for accurate analysis."
-        )
+        st.error("Image Quality Too Low — the uploaded image may be blurry or too low resolution for accurate analysis.")
         override = st.checkbox("Demo mode: continue anyway")
         if not override:
             st.stop()
 
     tip_carousel("scan")
 
-    conf_threshold = st.slider(
-        "Detection confidence threshold", 0.05, 0.90, 0.30, 0.05
-    )
+    conf_threshold = st.slider("Detection confidence threshold", 0.05, 0.90, 0.30, 0.05)
 
     # ---- Step 3: analyze ----
     if st.button("Analyze Radiograph", type="primary"):
@@ -156,11 +177,9 @@ elif page == "New Scan":
             st.write("✅ Image quality check")
             st.write("✅ Preprocessing")
             st.write("⏳ Detecting periapical lesions…")
-            model = load_model(WEIGHTS_PATH)
+            model = get_model()
             st.session_state.detections = run_detection(model, image, conf_threshold)
-            st.session_state.statuses = {
-                d.detection_id: "pending" for d in st.session_state.detections
-            }
+            st.session_state.statuses = {d.detection_id: "pending" for d in st.session_state.detections}
             st.session_state.meta = {}
             st.session_state.reviewed = False
             st.write("✅ Detecting periapical lesions")
@@ -186,7 +205,7 @@ elif page == "New Scan":
         st.download_button(
             "Download Report (Markdown)",
             report_md,
-            file_name=f"{st.session_state.image_name}_report.md",
+            file_name="meckel_analysis_report.md",
         )
         if st.button("Upload Another Image"):
             reset_scan()
@@ -194,11 +213,7 @@ elif page == "New Scan":
         st.stop()
 
     if not detections:
-        if st.session_state.image_name:
-            st.info(
-                "No periapical lesions detected above the current threshold. "
-                "Lower the threshold and re-analyze if you expect a finding."
-            )
+        st.info("No periapical lesions detected above the current threshold. Lower the threshold and re-analyze if you expect a finding.")
         st.stop()
 
     # ---- Step 4: results + verify ----
@@ -219,10 +234,7 @@ elif page == "New Scan":
         with st.container(border=True):
             head = st.columns([3, 1])
             label_shown = m.get("label", det.class_name)
-            head[0].markdown(
-                f"**Finding #{det.detection_id} — {label_shown}** — "
-                f"model confidence {det.confidence:.0%}"
-            )
+            head[0].markdown(f"**Finding #{det.detection_id} — {label_shown}** — model confidence {det.confidence:.0%}")
             head[1].markdown(f"Status: **{status}**")
 
             btns = st.columns(3)
@@ -245,10 +257,7 @@ elif page == "New Scan":
 
                         current_label = m.get("label", det.class_name)
                         label_idx = LABEL_OPTIONS.index(current_label) if current_label in LABEL_OPTIONS else 0
-                        new_label = st.selectbox(
-                            "Change Label", LABEL_OPTIONS, index=label_idx,
-                            key=f"label_{det.detection_id}",
-                        )
+                        new_label = st.selectbox("Change Label", LABEL_OPTIONS, index=label_idx, key=f"label_{det.detection_id}")
                         new_conf = st.slider(
                             "Clinician Confidence Level (%)", 0, 100,
                             int(m.get("confidence", round(det.confidence * 100))),
