@@ -34,6 +34,9 @@ def get_model():
 
 
 def init_state() -> None:
+    # Handle pending navigation before widgets are instantiated
+    if "pending_page" in st.session_state:
+        st.session_state.page = st.session_state.pop("pending_page")
     defaults = {
         "detections": [],
         "statuses": {},
@@ -100,7 +103,7 @@ if page == "Home":
     c3.markdown("##### 🩺 Present\nFindings are presented for clinician review — never a diagnosis.")
     st.markdown("---")
     if st.button("Upload Radiograph →", type="primary"):
-        st.session_state.page = "New Scan"
+        st.session_state["pending_page"] = "New Scan"
         st.rerun()
     st.caption("Supported formats: JPG, PNG  |  Max size: 10MB")
     tip_carousel("home")
