@@ -11,21 +11,20 @@ def build_report(
     detections: List[Detection],
     statuses: Dict[int, str],
     meta: Dict[int, Dict],
-    conf_threshold: float,
+    thresholds: Dict[str, float],
 ) -> str:
     lines = [
         "# Meckel AI — Analysis Report",
         "",
         f"- Image: {image_name}",
         f"- Generated: {datetime.datetime.now().isoformat(timespec='seconds')}",
-        f"- Confidence threshold: {conf_threshold:.2f}",
-        "",
-        "## Findings",
-        "",
     ]
+    for class_name, thr in thresholds.items():
+        lines.append(f"- Threshold ({class_name}): {thr:.2f}")
+    lines += ["", "## Findings", ""]
 
     if not detections:
-        lines.append("_No periapical lesions detected above threshold._")
+        lines.append("_No findings detected above threshold._")
         lines.append("")
 
     for det in detections:

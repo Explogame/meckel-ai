@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 from PIL import Image
 
-from meckel.ui.inference import load_model, run_detection
+from meckel.ui.inference import DEFAULT_THRESHOLDS, load_model, run_detection
 from meckel.ui.overlay import draw_detections
 from meckel.ui.quality import check_quality
 from meckel.ui.report import build_report
@@ -41,6 +41,7 @@ def init_state() -> None:
         "image_name": None,
         "reviewed": False,
         "tip_index": 0,
+        "thresholds": dict(DEFAULT_THRESHOLDS),
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -90,11 +91,11 @@ st.sidebar.caption("Model trained on dental-xray-dataset by shreku (Roboflow Uni
 if page == "Home":
     st.title("Smarter Radiographs. Better Decisions.")
     st.markdown(
-        "Meckel AI helps dental professionals detect and analyze **periapical lesions** "
-        "and present findings for clinical confirmation."
+        "Meckel AI helps dental professionals detect and analyze **periapical lesions** and **caries**, "
+        "and presents findings for clinical confirmation."
     )
     c1, c2, c3 = st.columns(3)
-    c1.markdown("##### 🔍 Detect\nAI finds key findings on periapical radiographs.")
+    c1.markdown("##### 🔍 Detect\nAI finds periapical lesions and caries on radiographs.")
     c2.markdown("##### 📍 Localize\nShows the exact location of each finding on your X-ray.")
     c3.markdown("##### 🩺 Present\nFindings are presented for clinician review — never a diagnosis.")
     st.markdown("---")
@@ -169,20 +170,30 @@ elif page == "New Scan":
 
     tip_carousel("scan")
 
-    conf_threshold = st.slider("Detection confidence threshold", 0.05, 0.90, 0.30, 0.05)
+    tc1, tc2 = st.columns(2)
+    pal_thr = tc1.slider(
+        "Periapical lesion threshold", 0.05, 0.90,
+        DEFAULT_THRESHOLDS["periapical_lesion"], 0.05,
+    )
+    car_thr = tc2.slider(
+        "Caries threshold", 0.05, 0.90,
+        DEFAULT_THRESHOLDS["caries"], 0.05,
+    )
+    thresholds = {"periapical_lesion": pal_thr, "caries": car_thr}
 
     # ---- Step 3: analyze ----
     if st.button("Analyze Radiograph", type="primary"):
         with st.status("Analyzing your radiograph…", expanded=True) as status:
             st.write("✅ Image quality check")
             st.write("✅ Preprocessing")
-            st.write("⏳ Detecting periapical lesions…")
+            st.write("⏳ Detecting findings…")
             model = get_model()
-            st.session_state.detections = run_detection(model, image, conf_threshold)
+            st.session_state.detections = run_detection(model, image, thresholds)
             st.session_state.statuses = {d.detection_id: "pending" for d in st.session_state.detections}
             st.session_state.meta = {}
             st.session_state.reviewed = False
-            st.write("✅ Detecting periapical lesions")
+            st.session_state.thresholds = thresholds
+            st.write("✅ Detecting findings")
             st.write("✅ Preparing results")
             status.update(label="Analysis complete", state="complete")
 
@@ -198,7 +209,7 @@ elif page == "New Scan":
             detections,
             st.session_state.statuses,
             st.session_state.meta,
-            conf_threshold,
+            st.session_state.thresholds,
         )
         with st.expander("📄 View Report"):
             st.markdown(report_md)
@@ -213,7 +224,10 @@ elif page == "New Scan":
         st.stop()
 
     if not detections:
-        st.info("No periapical lesions detected above the current threshold. Lower the threshold and re-analyze if you expect a finding.")
+        st.info(
+            "No findings detected above the current thresholds. "
+            "Lower the per-class thresholds and re-analyze if you expect a finding."
+        )
         st.stop()
 
     # ---- Step 4: results + verify ----
@@ -282,10 +296,11 @@ elif page == "New Scan":
     st.markdown("---")
     if st.button("Finish Review & Save Feedback", type="primary"):
         payload = {
-            "confidence_threshold": conf_threshold,
+            "thresholds": st.session_state.thresholds,
             "findings": [
                 {
                     "detection_id": d.detection_id,
+                    "class": d.class_name,
                     "model_confidence": round(d.confidence, 4),
                     "box": [d.x1, d.y1, d.x2, d.y2],
                     "status": st.session_state.statuses.get(d.detection_id, "pending"),

@@ -4,13 +4,17 @@ from typing import Dict, List
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .inference import Detection
+from .inference import CLASS_SHORT, Detection
+
+CLASS_COLORS = {
+    "periapical_lesion": "#FF3B30",
+    "caries": "#FF9500",
+}
 
 STATUS_COLORS = {
-    "pending": "#FF3B30",
     "confirmed": "#34C759",
     "dismissed": "#8E8E93",
-    "adjusted": "#FF9500",
+    "adjusted": "#30B0F0",
 }
 
 
@@ -35,11 +39,17 @@ def draw_detections(
 
     for det in detections:
         status = statuses.get(det.detection_id, "pending")
-        color = STATUS_COLORS.get(status, STATUS_COLORS["pending"])
+
+        if status == "pending":
+            color = CLASS_COLORS.get(det.class_name, "#FF3B30")
+        else:
+            color = STATUS_COLORS.get(status, "#FF3B30")
 
         draw.rectangle([det.x1, det.y1, det.x2, det.y2], outline=color, width=line_width)
 
-        label = f"#{det.detection_id} {det.confidence:.0%}"
+        short = CLASS_SHORT.get(det.class_name, det.class_name[:3].upper())
+        label = f"#{det.detection_id} {short} {det.confidence:.0%}"
+
         try:
             bbox = draw.textbbox((det.x1, det.y1), label, font=font)
             text_w = bbox[2] - bbox[0]

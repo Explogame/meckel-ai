@@ -3,13 +3,23 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 
-TARGET_CLASS = "periapical_lesion"
+TARGET_CLASSES = ["periapical_lesion", "caries"]
+
+CLASS_SHORT = {
+    "periapical_lesion": "PAL",
+    "caries": "CAR",
+}
+
+DEFAULT_THRESHOLDS = {
+    "periapical_lesion": 0.30,
+    "caries": 0.40,
+}
 
 
 @dataclass
@@ -36,13 +46,18 @@ def load_model(weights_path: str | Path) -> YOLO:
 def run_detection(
     model: YOLO,
     image: Image.Image,
-    conf: float,
+    thresholds: Dict[str, float],
 ) -> List[Detection]:
+    """
+    Run inference and return detections for all target classes,
+    filtered by per-class confidence thresholds, sorted by confidence.
+    """
     device = os.environ.get("MECKEL_DEVICE", "cpu")
+    min_conf = min(thresholds.values()) if thresholds else 0.05
 
     results = model.predict(
         source=np.asarray(image.convert("RGB")),
-        conf=conf,
+        conf=min_conf,
         device=device,
         verbose=False,
     )
@@ -61,7 +76,10 @@ def run_detection(
 
         for xy, cf, cl in zip(xyxy, confs, classes):
             class_name = names.get(int(cl), str(int(cl)))
-            if class_name != TARGET_CLASS:
+            if class_name not in TARGET_CLASSES:
+                continue
+            threshold = thresholds.get(class_name, 0.30)
+            if float(cf) < threshold:
                 continue
 
             detections.append(
