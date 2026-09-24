@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    container_name: meckel-ai-web
+    restart: always
+    ports:
+      - "127.0.0.1:8150:8000"
+    mem_limit: 1200m
+    cpus: 1.0
+    environment:
+      - MECKEL_DEVICE=cpu
+    volumes:
+      - ./outputs/reviews:/app/outputs/reviews

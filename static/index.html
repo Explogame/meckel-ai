@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meckel AI — Dental Radiograph Copilot</title>
+<link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">🦷 <span>Meckel<sup>AI</sup></span></div>
+  <nav>
+    <button class="nav-btn active" data-view="home">Home</button>
+    <button class="nav-btn" data-view="scan">New Scan</button>
+    <button class="nav-btn" data-view="hub">Feedback Hub</button>
+  </nav>
+  <div class="side-note warn">AI assistance only. Not a diagnosis. Every finding requires clinician review.</div>
+  <div class="side-note">Model trained on dental-xray-dataset by shreku (Roboflow Universe), CC BY 4.0.</div>
+</aside>
+
+<main>
+  <section id="view-home" class="view active">
+    <h1>Smarter Radiographs. Better Decisions.</h1>
+    <p class="lede">Meckel AI helps dental professionals detect and analyze <strong>periapical lesions</strong> and <strong>caries</strong>, and presents findings for clinical confirmation.</p>
+    <div class="cards3">
+      <div class="card"><h3>🔍 Detect</h3><p>AI finds periapical lesions and caries on radiographs.</p></div>
+      <div class="card"><h3>📍 Localize</h3><p>Shows the exact location of each finding on your X-ray.</p></div>
+      <div class="card"><h3>🩺 Present</h3><p>Findings are presented for clinician review — never a diagnosis.</p></div>
+    </div>
+    <button class="btn primary big" data-goto="scan">Upload Radiograph →</button>
+    <p class="muted">Supported formats: JPG, PNG · Max size: 10MB</p>
+  </section>
+
+  <section id="view-scan" class="view">
+    <h1>New Scan</h1>
+    <div class="stepper"><span class="step on">1 Upload</span><span class="step">2 Quality</span><span class="step">3 Analyze</span><span class="step">4 Verify</span></div>
+    <div class="card">
+      <label class="drop" id="dropzone">
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png" hidden />
+        <div id="drop-hint"><strong>Drag & drop your radiograph here</strong><br/>or click to choose a file</div>
+        <img id="preview" alt="" hidden />
+      </label>
+      <label class="grow">Or test with a bundled sample:
+        <select id="sample-select"><option value="">-- choose a sample --</option></select>
+      </label>
+    </div>
+    <div class="card" id="quality-card" hidden>
+      <h2>Image Quality Check</h2>
+      <ul id="quality-list" class="checks"></ul>
+      <div id="quality-block" class="alert error" hidden>Image quality too low for reliable analysis.</div>
+      <label id="quality-override-wrap" hidden class="row"><input type="checkbox" id="quality-override" /> Demo mode: continue anyway</label>
+    </div>
+    <div class="card" id="analyze-card" hidden>
+      <div class="row sliders">
+        <label>Periapical threshold <input type="range" id="pal-thr" min="0.05" max="0.9" step="0.05" value="0.30" /><span id="pal-thr-val">0.30</span></label>
+        <label>Caries threshold <input type="range" id="car-thr" min="0.05" max="0.9" step="0.05" value="0.40" /><span id="car-thr-val">0.40</span></label>
+      </div>
+      <button class="btn primary" id="analyze-btn">Analyze Radiograph</button>
+      <div id="analyze-status" class="muted" hidden>Analyzing…</div>
+    </div>
+  </section>
+
+  <section id="view-results" class="view">
+    <h1>Analysis Results</h1>
+    <div class="card canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <p class="muted">Drag a box to move it · drag the corner handle to resize (marks the finding as adjusted)</p>
+    </div>
+    <h2>Review Findings</h2>
+    <div id="findings"></div>
+    <button class="btn primary" id="finish-btn">Finish Review & Save Feedback</button>
+  </section>
+
+  <section id="view-success" class="view">
+    <h1>Analysis Complete!</h1>
+    <p class="lede">Your radiograph has been analyzed and the review was saved.</p>
+    <div class="row">
+      <button class="btn primary" id="report-btn">📄 Download Report</button>
+      <button class="btn" data-goto="scan">Upload Another Image</button>
+    </div>
+  </section>
+
+  <section id="view-hub" class="view">
+    <h1>Feedback Hub</h1>
+    <div class="cards4" id="hub-metrics"></div>
+    <table class="table" id="hub-table" hidden>
+      <thead><tr><th>Time</th><th>Image</th><th>Findings</th><th>Confirmed</th><th>Dismissed</th><th>Adjusted</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="hub-empty" class="muted">No reviews saved yet.</p>
+  </section>
+</main>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
