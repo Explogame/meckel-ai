@@ -7,89 +7,177 @@
 <link rel="stylesheet" href="/static/css/styles.css" />
 </head>
 <body>
-<aside class="sidebar">
-  <div class="brand">🦷 <span>Meckel<sup>AI</sup></span></div>
-  <nav>
-    <button class="nav-btn active" data-view="home">Home</button>
-    <button class="nav-btn" data-view="scan">New Scan</button>
-    <button class="nav-btn" data-view="hub">Feedback Hub</button>
-  </nav>
-  <div class="side-note warn">AI assistance only. Not a diagnosis. Every finding requires clinician review.</div>
-  <div class="side-note">Model trained on dental-xray-dataset by shreku (Roboflow Universe), CC BY 4.0.</div>
-</aside>
+<header class="topbar">
+  <div class="topbar-brand">🦷 Meckel<sup>AI</sup></div>
+  <span class="user-chip"><span class="avatar">DA</span><span class="user-txt">Dr. Adeyemi · General Dentist</span></span>
+</header>
 
-<main>
-  <section id="view-home" class="view active">
-    <h1>Smarter Radiographs. Better Decisions.</h1>
-    <p class="lede">Meckel AI helps dental professionals detect and analyze <strong>periapical lesions</strong> and <strong>caries</strong>, and presents findings for clinical confirmation.</p>
-    <div class="cards3">
-      <div class="card"><h3>🔍 Detect</h3><p>AI finds periapical lesions and caries on radiographs.</p></div>
-      <div class="card"><h3>📍 Localize</h3><p>Shows the exact location of each finding on your X-ray.</p></div>
-      <div class="card"><h3>🩺 Present</h3><p>Findings are presented for clinician review — never a diagnosis.</p></div>
+<div class="shell">
+  <aside class="sidebar">
+    <nav>
+      <button class="nav-btn active" data-view="home"><span class="nav-ico">🏠</span> Home</button>
+      <button class="nav-btn" data-view="scan"><span class="nav-ico">➕</span> New Scan</button>
+      <button class="nav-btn" data-view="hub"><span class="nav-ico">🕘</span> Feedback Hub</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="tagline">Better insights.<br />Safer decisions.</div>
+      <div class="side-note warn">AI assistance only — not a diagnosis. Every finding requires clinician review.</div>
+      <div class="side-note">Model trained on dental-xray-dataset by shreku (Roboflow Universe), CC BY 4.0.</div>
     </div>
-    <button class="btn primary big" data-goto="scan">Upload Radiograph →</button>
-    <p class="muted">Supported formats: JPG, PNG · Max size: 10MB</p>
-  </section>
+  </aside>
 
-  <section id="view-scan" class="view">
-    <h1>New Scan</h1>
-    <div class="stepper"><span class="step on">1 Upload</span><span class="step">2 Quality</span><span class="step">3 Analyze</span><span class="step">4 Verify</span></div>
-    <div class="card">
-      <label class="drop" id="dropzone">
-        <input type="file" id="file-input" accept=".jpg,.jpeg,.png" hidden />
-        <div id="drop-hint"><strong>Drag & drop your radiograph here</strong><br/>or click to choose a file</div>
-        <img id="preview" alt="" hidden />
-      </label>
-      <label class="grow">Or test with a bundled sample:
-        <select id="sample-select"><option value="">-- choose a sample --</option></select>
-      </label>
-    </div>
-    <div class="card" id="quality-card" hidden>
-      <h2>Image Quality Check</h2>
-      <ul id="quality-list" class="checks"></ul>
-      <div id="quality-block" class="alert error" hidden>Image quality too low for reliable analysis.</div>
-      <label id="quality-override-wrap" hidden class="row"><input type="checkbox" id="quality-override" /> Demo mode: continue anyway</label>
-    </div>
-    <div class="card" id="analyze-card" hidden>
-      <div class="row sliders">
-        <label>Periapical threshold <input type="range" id="pal-thr" min="0.05" max="0.9" step="0.05" value="0.30" /><span id="pal-thr-val">0.30</span></label>
-        <label>Caries threshold <input type="range" id="car-thr" min="0.05" max="0.9" step="0.05" value="0.40" /><span id="car-thr-val">0.40</span></label>
+  <main>
+    <!-- HOME -->
+    <section id="view-home" class="view active">
+      <div class="hello"><strong>Good morning, Doctor 👋</strong> <span class="muted">Your AI co-pilot for smarter, safer dental care.</span></div>
+      <div class="tracker" id="tracker-home"></div>
+      <h1 class="hero">Smarter Radiographs.<br />Better Decisions.</h1>
+      <p class="lede">Meckel AI helps dental professionals detect and analyze <strong>periapical lesions</strong> and <strong>caries</strong> with clinically relevant insights — every finding is confirmed by you.</p>
+      <div class="cards3">
+        <div class="card feature"><div class="ico">🔍</div><h3>Detect</h3><p>AI finds key findings on periapical radiographs.</p></div>
+        <div class="card feature"><div class="ico">📍</div><h3>Localize</h3><p>Shows the exact location of each finding on your X-ray.</p></div>
+        <div class="card feature"><div class="ico">🩺</div><h3>Present</h3><p>Findings are presented for your confirmation — never a diagnosis.</p></div>
       </div>
-      <button class="btn primary" id="analyze-btn">Analyze Radiograph</button>
-      <div id="analyze-status" class="muted" hidden>Analyzing…</div>
-    </div>
-  </section>
+      <button class="btn primary big" data-goto="scan">Upload Radiograph →</button>
+      <p class="muted center">Supported formats: JPG, PNG &nbsp;|&nbsp; Max size: 10MB</p>
+    </section>
 
-  <section id="view-results" class="view">
-    <h1>Analysis Results</h1>
-    <div class="card canvas-wrap">
-      <canvas id="canvas"></canvas>
-      <p class="muted">Drag a box to move it · drag the corner handle to resize (marks the finding as adjusted)</p>
-    </div>
-    <h2>Review Findings</h2>
-    <div id="findings"></div>
-    <button class="btn primary" id="finish-btn">Finish Review & Save Feedback</button>
-  </section>
+    <!-- SCAN -->
+    <section id="view-scan" class="view">
+      <a class="backlink" data-goto="home">← Back</a>
+      <h1>Upload Radiograph</h1>
+      <p class="lede">Upload a clear periapical or bitewing radiograph for analysis. Our AI will check the image quality and begin processing.</p>
+      <div class="tracker" id="tracker-scan"></div>
 
-  <section id="view-success" class="view">
-    <h1>Analysis Complete!</h1>
-    <p class="lede">Your radiograph has been analyzed and the review was saved.</p>
-    <div class="row">
-      <button class="btn primary" id="report-btn">📄 Download Report</button>
-      <button class="btn" data-goto="scan">Upload Another Image</button>
-    </div>
-  </section>
+      <div class="card" id="upload-card">
+        <label class="drop" id="dropzone">
+          <input type="file" id="file-input" accept=".jpg,.jpeg,.png" hidden />
+          <div id="drop-hint">
+            <div class="drop-ico">☁️</div>
+            <strong>Drag & drop your image here</strong>
+            <span class="muted">or</span><br />
+            <span class="btn primary">Choose File</span>
+          </div>
+          <img id="preview" alt="" hidden />
+        </label>
+        <p class="muted center">Supported formats: JPG, PNG &nbsp;|&nbsp; Max size: 10MB</p>
+        <label class="sample-row">Or test with a bundled sample:
+          <select id="sample-select"><option value="">-- choose a sample --</option></select>
+        </label>
+        <div class="tipbox">
+          <strong>💡 Quick Tips</strong>
+          <ul><li>Use a clear, high-quality image if possible.</li><li>Ensure the tooth of interest is fully visible.</li></ul>
+        </div>
+      </div>
 
-  <section id="view-hub" class="view">
-    <h1>Feedback Hub</h1>
-    <div class="cards4" id="hub-metrics"></div>
-    <table class="table" id="hub-table" hidden>
-      <thead><tr><th>Time</th><th>Image</th><th>Findings</th><th>Confirmed</th><th>Dismissed</th><th>Adjusted</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <p id="hub-empty" class="muted">No reviews saved yet.</p>
-  </section>
-</main>
+      <div class="card" id="quality-card" hidden>
+        <h2>Image Quality Check</h2>
+        <ul id="quality-list" class="checks"></ul>
+        <div id="quality-ok" class="banner good" hidden><span class="b-ico">✅</span><div><strong>Image Quality: Good</strong><br /><span class="muted">Your image is clear and suitable for analysis.</span></div></div>
+        <div id="quality-bad" class="banner bad" hidden><span class="b-ico">⚠️</span><div><strong>Image Quality Too Low</strong><br /><span class="muted">The uploaded image may be blurry or too low resolution for accurate analysis.</span></div></div>
+        <div class="row" id="quality-actions" hidden>
+          <button class="btn primary" id="quality-continue">Continue</button>
+          <button class="btn" id="quality-retry">Try Another Image</button>
+          <label class="muted override" id="override-wrap" hidden><input type="checkbox" id="quality-override" /> demo override</label>
+        </div>
+      </div>
+
+      <div class="card" id="analyze-card" hidden>
+        <div class="row sliders">
+          <label>Periapical threshold <input type="range" id="pal-thr" min="0.05" max="0.9" step="0.05" value="0.30" /><span class="chip neutral" id="pal-thr-val">0.30</span></label>
+          <label>Caries threshold <input type="range" id="car-thr" min="0.05" max="0.9" step="0.05" value="0.40" /><span class="chip neutral" id="car-thr-val">0.40</span></label>
+        </div>
+        <button class="btn primary big" id="analyze-btn">Analyze Radiograph</button>
+      </div>
+
+      <div class="card analyzing" id="analyzing-card" hidden>
+        <div class="spinner"></div>
+        <h2>Analyzing your radiograph…</h2>
+        <p class="muted center">This usually takes a few seconds. Please don't close the page.</p>
+        <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+        <ol class="pipeline" id="pipeline">
+          <li>Image quality check</li>
+          <li>Preprocessing</li>
+          <li>Detecting findings</li>
+          <li>Preparing results</li>
+        </ol>
+        <div class="tipbox">
+          <div class="tip-head"><button class="icon-btn" id="tip-prev">‹</button><strong>💡 Dental Tip</strong><button class="icon-btn" id="tip-next">›</button></div>
+          <p id="tip-text"></p>
+          <div class="muted center" id="tip-count"></div>
+        </div>
+      </div>
+
+      <div class="card error-card" id="format-error" hidden>
+        <div class="err-ico">🖼️🚫</div>
+        <h2>Unsupported Image Format</h2>
+        <p class="muted">We currently support JPG and PNG files only.</p>
+        <button class="btn primary" id="format-retry">Choose a Different File</button>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="view-results" class="view">
+      <h1>Analysis Results</h1>
+      <p class="lede" id="results-subtitle"></p>
+      <div class="tracker" id="tracker-results"></div>
+      <div class="card dark viewer">
+        <div class="viewer-bar">
+          <div class="seg">
+            <button class="seg-btn active" id="toggle-overlay">AI Analysis</button>
+            <button class="seg-btn" id="toggle-original">Original</button>
+          </div>
+          <span class="hint">drag a box to move · corner handle to resize</span>
+        </div>
+        <canvas id="canvas"></canvas>
+      </div>
+      <h2>Review Findings</h2>
+      <div id="findings"></div>
+      <div class="row end">
+        <button class="btn primary big" id="finish-btn">Finish Review & Save Feedback</button>
+      </div>
+    </section>
+
+    <!-- SUCCESS -->
+    <section id="view-success" class="view center-col">
+      <div class="tracker" id="tracker-success"></div>
+      <div class="success-ico">🦷✅</div>
+      <h1>Analysis Complete!</h1>
+      <p class="lede">Your radiograph has been successfully analyzed and the review saved.</p>
+      <div class="col-btns">
+        <button class="btn primary big" id="report-btn">View Report</button>
+        <button class="btn big" data-goto="scan">Upload Another Image</button>
+      </div>
+      <div class="tipbox wide">💡 <strong>Your feedback matters.</strong> Your corrections help improve Meckel for future analyses.</div>
+      <div class="card report-card" id="report-card" hidden>
+        <h2>Detailed Analysis Report</h2>
+        <div id="report-body"></div>
+        <button class="btn" id="report-download">⬇ Download Report (Markdown)</button>
+      </div>
+    </section>
+
+    <!-- HUB -->
+    <section id="view-hub" class="view">
+      <h1>Feedback Hub</h1>
+      <p class="lede">Your corrections help us build a smarter and more accurate model over time.</p>
+      <div class="cards4" id="hub-metrics"></div>
+      <div class="card table-wrap">
+        <table class="table" id="hub-table" hidden>
+          <thead><tr><th>Date</th><th>Image</th><th>Findings</th><th>Confirmed</th><th>Dismissed</th><th>Adjusted</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="hub-empty" class="muted">No reviews saved yet. Complete a scan review to populate this hub.</p>
+    </section>
+  </main>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-view="home">🏠<span>Home</span></button>
+  <button class="nav-btn" data-view="scan">➕<span>New Scan</span></button>
+  <button class="nav-btn" data-view="hub">🕘<span>Hub</span></button>
+</nav>
+
 <script src="/static/js/app.js"></script>
 </body>
 </html>
