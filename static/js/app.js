@@ -3,7 +3,7 @@ const $$ = (s) => document.querySelectorAll(s);
 
 const CLASS_COLORS = { periapical_lesion: "#FF3B30", caries: "#FF9500" };
 const CLASS_SHORT = { periapical_lesion: "PAL", caries: "CAR" };
-const CLASS_ICON = { periapical_lesion: "🦷", caries: "⚠️" };
+const CLASS_ICON = { periapical_lesion: "triangle-alert", caries: "circle-dot" };
 const CLASS_LABEL = { periapical_lesion: "Periapical Lesion", caries: "Caries" };
 const STATUS_COLORS = { confirmed: "#34C759", dismissed: "#8E8E93", adjusted: "#30B0F0" };
 
@@ -28,6 +28,8 @@ const state = {
   thresholds: { periapical_lesion: 0.30, caries: 0.40 },
   drag: null, tipIndex: 0, tipTimer: null, stage: 0,
 };
+
+function icons() { if (window.lucide) lucide.createIcons(); }
 
 /* ---------- navigation & tracker ---------- */
 function renderTracker(sel, active) {
@@ -166,9 +168,7 @@ $("#tip-next").addEventListener("click", () => { state.tipIndex = (state.tipInde
 
 /* ---------- analyze ---------- */
 function setPipeline(stepStates) {
-  $$("#pipeline li").forEach((li, i) => {
-    li.className = stepStates[i] || "";
-  });
+  $$("#pipeline li").forEach((li, i) => { li.className = stepStates[i] || ""; });
 }
 
 $("#analyze-btn").addEventListener("click", async () => {
@@ -329,15 +329,15 @@ function renderFindings() {
     card.id = "finding-" + i;
     card.innerHTML = `
       <div class="f-head">
-        <div class="f-ico ${f.class_name}">${CLASS_ICON[f.class_name] || "❓"}</div>
+        <div class="f-ico ${f.class_name}"><i data-lucide="${CLASS_ICON[f.class_name] || "circle-dot"}"></i></div>
         <div class="f-title"><span class="f-label">${CLASS_LABEL[f.class_name] || f.class_name} Detected</span><small>Finding #${f.id} · model confidence ${Math.round(f.confidence * 100)}%</small></div>
         <span class="chip ${f.status} f-status">${f.status}</span>
       </div>
       <div class="conf-row"><span>Confidence</span><div class="conf-bar"><div class="conf-fill" style="width:${Math.round(f.confidence * 100)}%"></div></div><span>${Math.round(f.confidence * 100)}%</span></div>
       <div class="f-actions">
-        <button class="btn primary" data-act="confirm">✓ Confirm</button>
-        <button class="btn" data-act="dismiss">✕ Dismiss</button>
-        <button class="btn" data-act="correct">✎ Correct</button>
+        <button class="btn primary" data-act="confirm"><i data-lucide="check"></i> Confirm</button>
+        <button class="btn" data-act="dismiss"><i data-lucide="x"></i> Dismiss</button>
+        <button class="btn" data-act="correct"><i data-lucide="pencil"></i> Correct</button>
       </div>
       <div class="f-correct" hidden>
         <label>Change Label
@@ -351,8 +351,8 @@ function renderFindings() {
         </label>
         <p class="muted">To move or resize the box, drag it directly on the image above.</p>
         <div class="save-row">
-          <button class="btn primary" data-act="save-correct">Save Correction</button>
-          <button class="btn" data-act="cancel-correct">Cancel</button>
+          <button class="btn primary" data-act="save-correct"><i data-lucide="check"></i> Save Correction</button>
+          <button class="btn" data-act="cancel-correct"><i data-lucide="x"></i> Cancel</button>
         </div>
       </div>`;
 
@@ -382,12 +382,10 @@ function renderFindings() {
 
     wrap.appendChild(card);
   });
+  icons();
 }
 
-function refresh(i) {
-  updateCardStatus(i);
-  draw();
-}
+function refresh(i) { updateCardStatus(i); draw(); }
 function updateCardStatus(i) {
   const card = $("#finding-" + i);
   if (!card) return;
@@ -480,4 +478,5 @@ async function loadHub() {
   const sel = $("#sample-select");
   samples.forEach((n) => sel.insertAdjacentHTML("beforeend", `<option value="${n}">${n}</option>`));
   renderTracker("#tracker-home", 0);
+  icons();
 })();
