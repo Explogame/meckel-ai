@@ -231,10 +231,30 @@ select, textarea {
 .report-card td:first-child { color: var(--muted); width: 42%; }
 
 /* ---------- hub ---------- */
-.table-wrap { overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.table th { color: var(--muted); font-weight: 600; background: #F8FAFD; }
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+  margin-bottom: 16px;
+}
+.table {
+  min-width: 600px; /* Prevents the table from squishing on small screens */
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th, .table td {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.table th {
+  color: var(--muted);
+  font-weight: 600;
+  background: #F8FAFD;
+  position: sticky;
+  top: 0; /* Keeps headers visible if the table ever gets vertically long */
+}
 
 /* ---------- sliders ---------- */
 .sliders label { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); flex: 1; min-width: 240px; }
