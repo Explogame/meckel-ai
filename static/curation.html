@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Meckel Curation Tool</title>
+<style>
+  :root { --bg:#0D1B2A; --panel:#16233B; --text:#E2E8F0; --muted:#7C8BA1; --pal:#FF3B30; --car:#FF9500; --ok:#34C759; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  header { display:flex; gap:16px; align-items:center; padding:10px 16px; background:var(--panel); flex-wrap:wrap; }
+  header b { font-size:16px; }
+  #progress { color:var(--ok); font-weight:700; }
+  select, button { background:#0B1526; color:var(--text); border:1px solid #2A3B55; border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; }
+  button.primary { background:#1E88E5; border-color:#1E88E5; color:#fff; }
+  main { display:flex; gap:14px; padding:14px; align-items:flex-start; }
+  #canvas-wrap { flex:1; background:#000; border-radius:10px; overflow:hidden; text-align:center; }
+  canvas { max-width:100%; cursor:crosshair; }
+  aside { width:330px; background:var(--panel); border-radius:10px; padding:12px; }
+  .boxrow { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; margin-bottom:6px; background:#0B1526; }
+  .boxrow .sw { width:12px; height:12px; border-radius:3px; flex:none; }
+  .boxrow .name { flex:1; font-size:13px; }
+  .chip { padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; }
+  .chip.keep { background:#123524; color:var(--ok); }
+  .chip.drop { background:#2A3B55; color:var(--muted); }
+  .chip.relabel { background:#3A2A00; color:#FFD60A; }
+  footer { padding:8px 16px; color:var(--muted); font-size:12px; }
+  kbd { background:#0B1526; border:1px solid #2A3B55; border-radius:4px; padding:1px 6px; }
+</style>
+</head>
+<body>
+<header>
+  <b>🦷 Meckel Curation</b>
+  <span id="progress">…</span>
+  <label>Queue:
+    <select id="filter">
+      <option value="pal">periapical-containing first</option>
+      <option value="all">all labeled images</option>
+    </select>
+  </label>
+  <span id="filename" style="color:var(--muted)"></span>
+  <span style="flex:1"></span>
+  <button id="prev">← Prev</button>
+  <button id="next" class="primary">Save & Next →</button>
+</header>
+<main>
+  <div id="canvas-wrap"><canvas id="canvas"></canvas></div>
+  <aside>
+    <div id="boxlist"></div>
+    <p style="color:var(--muted);font-size:12px">
+      Click a row (or press its number) to cycle:<br/>
+      <span class="chip keep">keep</span> → <span class="chip drop">drop</span> → <span class="chip relabel">relabel</span><br/><br/>
+      <b>drop</b> = bad box / artifact / normal anatomy<br/>
+      <b>relabel</b> = box is real but wrong class<br/>
+      All boxes dropped ⇒ image becomes a negative sample.
+    </p>
+  </aside>
+</main>
+<footer>
+  <kbd>→</kbd>/<kbd>Space</kbd> save & next · <kbd>←</kbd> prev · <kbd>1…9</kbd> cycle box · local tool only, never deploy
+</footer>
+<script src="/static/js/curation.js"></script>
+</body>
+</html>
