@@ -2,18 +2,32 @@ const $ = (s) => document.querySelector(s);
 const CLASS_COLORS = { periapical_lesion: "#FF3B30", caries: "#FF9500" };
 const OTHER = { periapical_lesion: "caries", caries: "periapical_lesion" };
 
-let queue = [], reviewed = {}, unit = null, statuses = [], history = [];
+let queue = [], reviewed = {}, unit = null, statuses = [], history = [], rects = [];
 
 const canvas = $("#canvas");
 const ctx = canvas.getContext("2d");
 let img = new Image();
 
+/* ---------- help modal ---------- */
+function openHelp() { $("#help-overlay").hidden = false; }
+function closeHelp() {
+  $("#help-overlay").hidden = true;
+  localStorage.setItem("curation-help-seen", "1");
+}
+
 async function boot() {
-  await loadQueue();
+  $("#help-btn").addEventListener("click", openHelp);
+  $("#help-close").addEventListener("click", closeHelp);
+  if (!localStorage.getItem("curation-help-seen")) openHelp();
+
+  canvas.addEventListener("dragstart", (e) => e.preventDefault());
+  canvas.addEventListener("click", onCanvasClick);
   window.addEventListener("keydown", onKey);
   $("#next").addEventListener("click", next);
   $("#prev").addEventListener("click", prev);
   $("#filter").addEventListener("change", loadQueue);
+
+  await loadQueue();
 }
 
 async function loadQueue() {
@@ -44,6 +58,7 @@ async function loadUnit(key) {
 function scale() { return canvas.width / unit.width; }
 
 function draw() {
+  rects = [];
   const maxW = Math.min(1000, $("#canvas-wrap").clientWidth - 4);
   const s0 = Math.min(1, maxW / unit.width);
   canvas.width = Math.round(unit.width * s0);
@@ -56,6 +71,7 @@ function draw() {
     const [xc, yc, w, h] = b.box;
     const x1 = (xc - w / 2) * unit.width * s, y1 = (yc - h / 2) * unit.height * s;
     const bw = w * unit.width * s, bh = h * unit.height * s;
+    rects[i] = [x1, y1, bw, bh];
     const st = statuses[i];
     const color = st === "drop" ? "#8E8E93" : st === "relabel" ? CLASS_COLORS[OTHER[b.class_name]] : CLASS_COLORS[b.class_name];
 
@@ -82,6 +98,16 @@ function draw() {
   });
 }
 
+function onCanvasClick(e) {
+  if (!unit) return;
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  for (let i = unit.boxes.length - 1; i >= 0; i--) {
+    const [bx, by, bw, bh] = rects[i] || [0, 0, 0, 0];
+    if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) { cycle(i); return; }
+  }
+}
+
 function renderList() {
   const wrap = $("#boxlist");
   wrap.innerHTML = "";
@@ -95,8 +121,12 @@ function renderList() {
     row.addEventListener("click", () => cycle(i));
     wrap.appendChild(row);
   });
-  const meta = fetch("/capi/meta").then((r) => r.json()).then((m) => {
-    $("#progress").textContent = `${m.reviewed}/${m.total} reviewed`;
+  fetch("/capi/meta").then((r) => r.json()).then((m) => {
+    if ($("#filter").value === "pal") {
+      $("#progress").textContent = `${m.pal_reviewed}/${m.pal_total} in queue · ${m.reviewed}/${m.total} overall`;
+    } else {
+      $("#progress").textContent = `${m.reviewed}/${m.total} reviewed`;
+    }
   });
 }
 
@@ -117,9 +147,9 @@ async function next() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ key: unit.key, actions }),
   })).json();
-  $("#progress").textContent = `${res.reviewed}/${res.total} reviewed`;
   reviewed[unit.key] = true;
   history.push(unit.key);
+  renderList();
   const pos = queue.indexOf(unit.key);
   let nxt = null;
   for (let i = pos + 1; i < queue.length; i++) if (!reviewed[queue[i]]) { nxt = queue[i]; break; }

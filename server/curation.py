@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -55,7 +54,7 @@ def _ensure_loaded() -> None:
                 continue
             boxes = parse_yolo_label(label_path)
             if not boxes:
-                continue  # negatives need no curation
+                continue
             units.append(
                 {
                     "key": f"{split}/{image_path.name}",
@@ -90,9 +89,13 @@ def meta():
     _ensure_loaded()
     idx = index_actions(load_actions())
     reviewed = sum(1 for u in _state["units"] if idx.get(u["key"], {}).get("done"))
+    pal_units = [u for u in _state["units"] if u["has_pal"]]
+    pal_reviewed = sum(1 for u in pal_units if idx.get(u["key"], {}).get("done"))
     return {
         "total": len(_state["units"]),
         "reviewed": reviewed,
+        "pal_total": len(pal_units),
+        "pal_reviewed": pal_reviewed,
         "class_names": _state["class_names"],
     }
 

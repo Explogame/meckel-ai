@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Meckel Curation Tool</title>
 <style>
   :root { --bg:#0D1B2A; --panel:#16233B; --text:#E2E8F0; --muted:#7C8BA1; --pal:#FF3B30; --car:#FF9500; --ok:#34C759; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 "Segoe UI", system-ui, sans-serif; }
-  header { display:flex; gap:16px; align-items:center; padding:10px 16px; background:var(--panel); flex-wrap:wrap; }
+  header { display:flex; gap:12px; align-items:center; padding:10px 16px; background:var(--panel); flex-wrap:wrap; }
   header b { font-size:16px; }
   #progress { color:var(--ok); font-weight:700; }
   select, button { background:#0B1526; color:var(--text); border:1px solid #2A3B55; border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; }
   button.primary { background:#1E88E5; border-color:#1E88E5; color:#fff; }
+  #howto { background:#0B1526; color:var(--muted); padding:8px 16px; font-size:13px; border-bottom:1px solid #2A3B55; }
   main { display:flex; gap:14px; padding:14px; align-items:flex-start; }
   #canvas-wrap { flex:1; background:#000; border-radius:10px; overflow:hidden; text-align:center; }
-  canvas { max-width:100%; cursor:crosshair; }
-  aside { width:330px; background:var(--panel); border-radius:10px; padding:12px; }
-  .boxrow { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; margin-bottom:6px; background:#0B1526; }
+  canvas { max-width:100%; cursor:default; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+  aside { width:330px; background:var(--panel); border-radius:10px; padding:12px; flex:none; }
+  .boxrow { display:flex; align-items:center; gap:8px; padding:10px 8px; border-radius:8px; margin-bottom:6px; background:#0B1526; cursor:pointer; }
   .boxrow .sw { width:12px; height:12px; border-radius:3px; flex:none; }
   .boxrow .name { flex:1; font-size:13px; }
   .chip { padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; }
@@ -25,6 +27,22 @@
   .chip.relabel { background:#3A2A00; color:#FFD60A; }
   footer { padding:8px 16px; color:var(--muted); font-size:12px; }
   kbd { background:#0B1526; border:1px solid #2A3B55; border-radius:4px; padding:1px 6px; }
+  #help-overlay { position:fixed; inset:0; background:rgba(4,10,18,.8); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  #help-overlay[hidden] { display:none; }
+  .help-card { background:var(--panel); border:1px solid #2A3B55; border-radius:14px; max-width:560px; padding:20px 22px; max-height:85vh; overflow:auto; }
+  .help-card h2 { margin:0 0 10px; }
+  .help-card ol { padding-left:20px; display:flex; flex-direction:column; gap:10px; }
+  .help-card ul { padding-left:18px; margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
+  .help-card .muted { color:var(--muted); font-size:12px; }
+  @media (max-width: 900px) {
+    main { flex-direction:column; }
+    aside { width:100%; }
+    header { padding:8px; gap:8px; }
+    #filename { display:none; }
+    footer { display:none; }
+    button, select { padding:11px 14px; }
+    #next { flex:1; }
+  }
 </style>
 </head>
 <body>
@@ -39,18 +57,23 @@
   </label>
   <span id="filename" style="color:var(--muted)"></span>
   <span style="flex:1"></span>
+  <button id="help-btn">? Help</button>
   <button id="prev">← Prev</button>
   <button id="next" class="primary">Save & Next →</button>
 </header>
+<div id="howto">
+  <b>How:</b> click a box on the image (or its row at the right) to cycle
+  <span class="chip keep">keep</span> → <span class="chip drop">drop</span> → <span class="chip relabel">relabel</span>,
+  then press <b>Save & Next</b>. Boxes are NOT draggable here — clicking only changes the decision.
+</div>
 <main>
   <div id="canvas-wrap"><canvas id="canvas"></canvas></div>
   <aside>
     <div id="boxlist"></div>
     <p style="color:var(--muted);font-size:12px">
-      Click a row (or press its number) to cycle:<br/>
-      <span class="chip keep">keep</span> → <span class="chip drop">drop</span> → <span class="chip relabel">relabel</span><br/><br/>
-      <b>drop</b> = bad box / artifact / normal anatomy<br/>
-      <b>relabel</b> = box is real but wrong class<br/>
+      <b>drop</b> = bad box: crown/cervical region, interproximal shadow, cervical burnout, pulp chamber/root canal, artifact, normal anatomy<br/>
+      <b>relabel</b> = real disease, wrong class (switches to the other class)<br/>
+      <b>keep</b> = correct disease, correct class, correct location<br/>
       All boxes dropped ⇒ image becomes a negative sample.
     </p>
   </aside>
@@ -58,6 +81,27 @@
 <footer>
   <kbd>→</kbd>/<kbd>Space</kbd> save & next · <kbd>←</kbd> prev · <kbd>1…9</kbd> cycle box · local tool only, never deploy
 </footer>
+
+<div id="help-overlay" hidden>
+  <div class="help-card">
+    <h2>How curation works</h2>
+    <ol>
+      <li><b>Look.</b> Every annotated box in this image's label file is drawn and numbered (#0, #1, …). Both classes are shown: red = periapical_lesion, orange = caries.</li>
+      <li><b>Decide per box.</b> Click the box on the image — or its row in the right panel — to cycle:
+        <ul>
+          <li><span class="chip keep">keep</span> correct disease, correct class, correct location</li>
+          <li><span class="chip drop">drop</span> wrong box: around crown/cervical region, burnout, interproximal shadow, pulp chamber, artifact, normal anatomy</li>
+          <li><span class="chip relabel">relabel</span> real disease but wrong class — shown dashed in the other class's color</li>
+        </ul>
+      </li>
+      <li><b>Save & Next</b> (button, or <kbd>→</kbd>/<kbd>Space</kbd>). Decisions save automatically when you move on. Progress resumes where you left off, any time.</li>
+      <li>If <b>all</b> boxes get dropped, the image becomes a clean negative example — that's valuable too.</li>
+    </ol>
+    <p class="muted">Boxes are not draggable in this tool — clicking only changes the decision. Keyboard shortcuts: <kbd>←</kbd> prev, <kbd>→</kbd>/<kbd>Space</kbd> next, <kbd>1…9</kbd> cycle box #. On mobile: tap boxes and use the buttons.</p>
+    <button id="help-close" class="primary">Got it</button>
+  </div>
+</div>
+
 <script src="/static/js/curation.js"></script>
 </body>
 </html>
