@@ -3,6 +3,7 @@ const CLASS_COLORS = { periapical_lesion: "#FF3B30", caries: "#FF9500" };
 const OTHER = { periapical_lesion: "caries", caries: "periapical_lesion" };
 
 let queue = [], reviewed = {}, unit = null, statuses = [], history = [], rects = [];
+let dragState = null; // { idx, mode: "move"|"resize", startX, startY, origBox }
 
 const canvas = $("#canvas");
 const ctx = canvas.getContext("2d");
@@ -21,7 +22,11 @@ async function boot() {
   if (!localStorage.getItem("curation-help-seen")) openHelp();
 
   canvas.addEventListener("dragstart", (e) => e.preventDefault());
-  canvas.addEventListener("click", onCanvasClick);
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", onPointerUp);
+  canvas.addEventListener("pointercancel", onPointerUp);
+  
   window.addEventListener("keydown", onKey);
   $("#next").addEventListener("click", next);
   $("#prev").addEventListener("click", prev);
@@ -46,6 +51,7 @@ async function loadUnit(key) {
     const a = unit.actions[String(b.idx)];
     if (a === "drop") return "drop";
     if (a && a.startsWith("relabel:")) return "relabel";
+    if (a && a.startsWith("adjust:")) return "keep"; // adjusted boxes show as "keep" visually
     return "keep";
   });
   $("#filename").textContent = unit.key + (unit.done ? " (re-review)" : "");
@@ -88,6 +94,11 @@ function draw() {
       ctx.stroke();
     }
 
+    // Draw resize handle at bottom-right corner
+    const handleSize = 10;
+    ctx.fillStyle = color;
+    ctx.fillRect(x1 + bw - handleSize/2, y1 + bh - handleSize/2, handleSize, handleSize);
+
     const label = `#${b.idx} ${b.class_name}${st !== "keep" ? " [" + st.toUpperCase() + "]" : ""}`;
     ctx.font = "600 13px Segoe UI, sans-serif";
     const tw = ctx.measureText(label).width;
@@ -98,13 +109,66 @@ function draw() {
   });
 }
 
-function onCanvasClick(e) {
+/* ---------- drag and resize handlers ---------- */
+function onPointerDown(e) {
   if (!unit) return;
   const r = canvas.getBoundingClientRect();
   const x = e.clientX - r.left, y = e.clientY - r.top;
+  
+  // Check resize handles first (bottom-right corner of each box)
   for (let i = unit.boxes.length - 1; i >= 0; i--) {
+    if (statuses[i] === "drop") continue;
     const [bx, by, bw, bh] = rects[i] || [0, 0, 0, 0];
-    if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) { cycle(i); return; }
+    const handleX = bx + bw, handleY = by + bh;
+    if (Math.abs(x - handleX) < 12 && Math.abs(y - handleY) < 12) {
+      dragState = { idx: i, mode: "resize", startX: x, startY: y, origBox: [...unit.boxes[i].box] };
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+  }
+  
+  // Check if clicking inside a box (for move)
+  for (let i = unit.boxes.length - 1; i >= 0; i--) {
+    if (statuses[i] === "drop") continue;
+    const [bx, by, bw, bh] = rects[i] || [0, 0, 0, 0];
+    if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
+      dragState = { idx: i, mode: "move", startX: x, startY: y, origBox: [...unit.boxes[i].box] };
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+  }
+}
+
+function onPointerMove(e) {
+  if (!dragState) return;
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const s = scale();
+  
+  const dx = (x - dragState.startX) / (unit.width * s);
+  const dy = (y - dragState.startY) / (unit.height * s);
+  
+  if (dragState.mode === "move") {
+    const [xc, yc, w, h] = dragState.origBox;
+    unit.boxes[dragState.idx].box = [
+      Math.max(w/2, Math.min(1 - w/2, xc + dx)),
+      Math.max(h/2, Math.min(1 - h/2, yc + dy)),
+      w, h
+    ];
+  } else if (dragState.mode === "resize") {
+    const [xc, yc, origW, origH] = dragState.origBox;
+    const newW = Math.max(0.01, Math.min(1, origW + 2 * dx));
+    const newH = Math.max(0.01, Math.min(1, origH + 2 * dy));
+    unit.boxes[dragState.idx].box = [xc, yc, newW, newH];
+  }
+  
+  draw();
+}
+
+function onPointerUp(e) {
+  if (dragState) {
+    dragState = null;
+    renderList();
   }
 }
 
@@ -114,10 +178,17 @@ function renderList() {
   unit.boxes.forEach((b, i) => {
     const row = document.createElement("div");
     row.className = "boxrow";
+    
+    // Check if this box has been adjusted
+    const action = unit.actions[String(b.idx)];
+    const isAdjusted = action && action.startsWith("adjust:");
+    const statusText = isAdjusted ? "adjusted" : statuses[i];
+    const statusClass = isAdjusted ? "keep" : statuses[i];
+    
     row.innerHTML = `
       <span class="sw" style="background:${CLASS_COLORS[b.class_name]}"></span>
       <span class="name">#${b.idx} ${b.class_name}</span>
-      <span class="chip ${statuses[i]}">${statuses[i]}</span>`;
+      <span class="chip ${statusClass}">${statusText}</span>`;
     row.addEventListener("click", () => cycle(i));
     wrap.appendChild(row);
   });
@@ -139,9 +210,23 @@ function cycle(i) {
 async function next() {
   const actions = [];
   unit.boxes.forEach((b, i) => {
-    if (statuses[i] === "drop") actions.push({ box: b.idx, action: "drop" });
-    if (statuses[i] === "relabel") actions.push({ box: b.idx, action: "relabel:" + OTHER[b.class_name] });
+    const origAction = unit.actions[String(b.idx)];
+    const isAdjusted = origAction && origAction.startsWith("adjust:");
+    
+    // Check if box was moved/resized
+    const origBox = isAdjusted ? origAction.replace("adjust:", "").split(",").map(Number) : b.box;
+    const currentBox = b.box;
+    const wasMoved = currentBox.some((v, idx) => Math.abs(v - origBox[idx]) > 0.001);
+    
+    if (statuses[i] === "drop") {
+      actions.push({ box: b.idx, action: "drop" });
+    } else if (statuses[i] === "relabel") {
+      actions.push({ box: b.idx, action: "relabel:" + OTHER[b.class_name] });
+    } else if (wasMoved) {
+      actions.push({ box: b.idx, action: "adjust:" + currentBox.join(",") });
+    }
   });
+  
   const res = await (await fetch("/capi/commit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -164,7 +249,7 @@ function prev() {
 }
 
 function onKey(e) {
-  if (!unit) return;
+  if (!unit || dragState) return; // Disable keyboard shortcuts while dragging
   if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); next(); }
   if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
   const n = parseInt(e.key, 10);

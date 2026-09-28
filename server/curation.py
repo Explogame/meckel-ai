@@ -125,7 +125,9 @@ def get_unit(key: str):
     with Image.open(image_path) as im:
         width, height = im.size
     entry = index_actions(load_actions()).get(key, {})
-    actions = {str(b): rec["action"] for b, rec in entry.get("boxes", {}).items()}
+    actions = {}
+    for b_idx, rec in entry.get("boxes", {}).items():
+        actions[str(b_idx)] = rec["action"]
     return {
         "key": key,
         "split": u["split"],
