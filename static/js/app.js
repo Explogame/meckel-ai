@@ -25,7 +25,7 @@ const TRACK = [
 const state = {
   file: null, imageSrc: null, imageName: null, img: new Image(),
   quality: null, findings: [], showOverlay: true,
-  thresholds: { periapical_lesion: 0.30, caries: 0.40 },
+  thresholds: { periapical_lesion: 0.50, caries: 0.50 },
   drag: null, tipIndex: 0, tipTimer: null, stage: 0,
 };
 
@@ -65,6 +65,7 @@ function resetScan() {
   $("#analyze-card").hidden = true;
   $("#analyzing-card").hidden = true;
   $("#format-error").hidden = true;
+  $("#no-findings").hidden = true;
   $("#upload-card").hidden = false;
   $("#sample-select").value = "";
   $("#report-card").hidden = true;
@@ -95,6 +96,7 @@ $("#sample-select").addEventListener("change", (e) => {
 
 function setImage(src, name) {
   state.imageSrc = src; state.imageName = name; state.stage = 0;
+  $("#no-findings").hidden = true;
   state.img = new Image(); state.img.src = src;
   const prev = $("#preview");
   prev.src = src; prev.hidden = false;
@@ -174,6 +176,7 @@ function setPipeline(stepStates) {
 $("#analyze-btn").addEventListener("click", async () => {
   $("#analyze-card").hidden = true;
   $("#analyzing-card").hidden = false;
+  $("#no-findings").hidden = true;
   startTips();
   setPipeline(["done", "done", "active", ""]);
   $("#progress-fill").style.width = "45%";
@@ -202,7 +205,8 @@ $("#analyze-btn").addEventListener("click", async () => {
       $("#analyzing-card").hidden = true;
       if (!data.detections.length) {
         $("#analyze-card").hidden = false;
-        alert("No findings above the current thresholds. Lower them and re-analyze.");
+        $("#no-findings").hidden = false;
+        $("#no-findings").scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
       state.findings = data.detections.map((d) => ({ ...d, status: "pending", meta: {} }));
@@ -287,7 +291,7 @@ canvas.addEventListener("pointerdown", (evt) => {
   for (let i = state.findings.length - 1; i >= 0; i--) {
     const [x1, y1, x2, y2] = state.findings[i].box;
     if (Math.abs(px - x2) < 14 && Math.abs(py - y2) < 14) {
-      state.drag = { i, mode: "resize" };
+      state.drag = { i, mode: "resize", dx: px, dy: py };
       canvas.setPointerCapture(evt.pointerId);
       return;
     }

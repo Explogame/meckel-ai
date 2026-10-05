@@ -17,8 +17,8 @@ CLASS_SHORT = {
 }
 
 DEFAULT_THRESHOLDS = {
-    "periapical_lesion": 0.30,
-    "caries": 0.40,
+    "periapical_lesion": 0.50,
+    "caries": 0.50,
 }
 
 
