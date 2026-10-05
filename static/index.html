@@ -112,6 +112,17 @@
         </div>
       </div>
 
+      <div class="card" id="no-findings" hidden>
+        <div class="banner info" style="margin-top:0">
+          <span class="b-ico"><i data-lucide="search-x"></i></span>
+          <div>
+            <strong>No AI findings detected</strong><br />
+            <span class="muted">Meckel did not identify any findings above the current detection threshold. Clinical review is still recommended.</span>
+          </div>
+        </div>
+        <p class="muted">If you expect a finding, lower the per-class thresholds above and press <b>Analyze Radiograph</b> again.</p>
+      </div>
+
       <div class="card error-card" id="format-error" hidden>
         <div class="err-ico"><i data-lucide="image-off" class="icon-xl"></i></div>
         <h2>Unsupported Image Format</h2>
