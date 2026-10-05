@@ -6,6 +6,7 @@ from meckel.train.pipeline import run_training
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run full Meckel AI training.")
     parser.add_argument("--data", type=str, required=True, help="Absolute path to data.yaml")
+    parser.add_argument("--name", type=str, default="meckel_v1_full")
     args = parser.parse_args()
 
     config = TrainConfig(
@@ -15,15 +16,13 @@ def main() -> None:
         imgsz=640,
         device="0",
         project="runs/detect",
-        name="meckel_v1_full",
+        name=args.name,
         workers=0,
         patience=20,
-        cache="False",
+        cache=False,
     )
     
-    print(f"Starting full training run: {config.epochs} epochs, batch {config.batch}, cache={config.cache}")
-    print("This may take a few hours. Early stopping is enabled (patience=20).")
-    
+    print(f"Starting training run '{args.name}': {config.epochs} epochs, batch {config.batch}")
     save_dir = run_training(config)
     print(f"Training complete. Best weights saved to: {save_dir}/weights/best.pt")
 
